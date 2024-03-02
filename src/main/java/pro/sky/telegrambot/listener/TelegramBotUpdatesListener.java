@@ -1,36 +1,80 @@
 package pro.sky.telegrambot.listener;
 
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.UpdatesListener;
-import com.pengrad.telegrambot.model.Update;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import pro.sky.telegrambot.model.notificationtask.NotificationTask;
+import pro.sky.telegrambot.repositories.NotificationTaskRepository;
+import pro.sky.telegrambot.utils.MessageUtils;
 
-import javax.annotation.PostConstruct;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 @Service
 public class TelegramBotUpdatesListener implements UpdatesListener {
 
-    private Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
-
-    @Autowired
+    private final String PATTERN = "^(\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}) (.+)$";
     private TelegramBot telegramBot;
 
-    @PostConstruct
-    public void init() {
-        telegramBot.setUpdatesListener(this);
+    private final NotificationTaskRepository notificationTaskRepository;
+    private final MessageUtils messageUtils;
+    private Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
+
+    public TelegramBotUpdatesListener(NotificationTaskRepository notificationTaskRepository, MessageUtils messageUtils) {
+        this.notificationTaskRepository = notificationTaskRepository;
+        this.messageUtils = messageUtils;
     }
 
     @Override
-    public int process(List<Update> updates) {
-        updates.forEach(update -> {
-            logger.info("Processing update: {}", update);
-            // Process your updates here
-        });
-        return UpdatesListener.CONFIRMED_UPDATES_ALL;
+    public String getPattern() {
+        return PATTERN;
+    }
+
+    public void registerBot(TelegramBot telegramBot) {
+        this.telegramBot = telegramBot;
+    }
+
+    public void add(Update update) {
+        var message = update.getMessage().getText();
+        Pattern pattern = Pattern.compile(PATTERN);
+        Matcher matcher = pattern.matcher(message);
+        if (!matcher.find()) {
+            throw new RuntimeException();
+        }
+        LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+        NotificationTask notificationTask = new NotificationTask(
+                Long.valueOf(update.getMessage().getChatId().toString()),
+                message,
+                dateTime
+        );
+        notificationTaskRepository.save(notificationTask);
+    }
+
+    @Scheduled(cron = "0 0/1 * * * *")
+    public void run() {
+        List<NotificationTask> notifications = notificationTaskRepository.findAllByNotificationSentFalseAndDateNotificationLessThanEqual(
+                LocalDateTime.now()
+        );
+        notifications.forEach(
+                notificationTask -> {
+                    telegramBot.sendAnswerMessage(
+                            messageUtils.generateSendMessageWithText(
+                                    notificationTask.getChatId(),
+                                    notificationTask.getMessage()
+                            )
+                    );
+                    notificationTask.setNotificationSent(true);
+                    notificationTaskRepository.save(notificationTask);
+                }
+        );
+
     }
 
 }
