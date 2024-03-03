@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -12,6 +13,10 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import pro.sky.telegrambot.configuration.BotConfig;
 import pro.sky.telegrambot.utils.MessageUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -33,6 +38,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Создание меню
         List<BotCommand> commandList = new ArrayList<>();
         commandList.add(new BotCommand("/start", "Начальное меню"));
+        commandList.add(new BotCommand("/test", "Создать тестовое напомининие"));
         /*commandList.add(new BotCommand("/new_game", "Cоздать новую игру"));
         commandList.add(new BotCommand("/find_game", "Найти игру"));*/
         try {
@@ -65,6 +71,26 @@ public class TelegramBot extends TelegramLongPollingBot {
             try {
                 if (textMessage.equals("/start")) {
                     sendAnswerMessage(messageUtils.generateSendMessageWithText(update, "Добро пожаловать!"));
+                } else if (textMessage.equals("/test")) {
+                    LocalTime timeNow = LocalTime.now();
+                    LocalDateTime dateTime = LocalDateTime.of(
+                            LocalDate.now(),
+                            LocalTime.of(
+                                    timeNow.getHour(),
+                                    timeNow.getMinute() + 1,
+                                    0
+                            )
+                    );
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+                    String text = dateTime.format(formatter) + " Тестовое напоминание";
+                    sendAnswerMessage(
+                            messageUtils.generateSendMessageWithText(
+                                    update,
+                                    "Создано тестовое напомининие \"" + text + "\""
+                            )
+                    );
+                    update.getMessage().setText(text);
+                    updatesListener.add(update);
                 } else if (Pattern.matches(updatesListener.getPattern(), textMessage)) {
                     updatesListener.add(update);
                 } else {

@@ -51,7 +51,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
         NotificationTask notificationTask = new NotificationTask(
                 Long.valueOf(update.getMessage().getChatId().toString()),
-                message,
+                matcher.group(2),
                 dateTime
         );
         notificationTaskRepository.save(notificationTask);
@@ -64,14 +64,19 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         );
         notifications.forEach(
                 notificationTask -> {
-                    telegramBot.sendAnswerMessage(
-                            messageUtils.generateSendMessageWithText(
-                                    notificationTask.getChatId(),
-                                    notificationTask.getMessage()
-                            )
-                    );
-                    notificationTask.setNotificationSent(true);
-                    notificationTaskRepository.save(notificationTask);
+                    try {
+                        telegramBot.sendAnswerMessage(
+                                messageUtils.generateSendMessageWithText(
+                                        notificationTask.getChatId(),
+                                        notificationTask.getMessage()
+                                )
+                        );
+                        notificationTask.setNotificationSent(true);
+                        notificationTaskRepository.save(notificationTask);
+                    } catch (RuntimeException e) {
+                        logger.error(LocalDateTime.now() + ": Не удалось отправить сообщение с id = \"" + notificationTask.getId() + "\"");
+                    }
+
                 }
         );
 
