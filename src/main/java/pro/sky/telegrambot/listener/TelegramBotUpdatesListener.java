@@ -6,8 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import pro.sky.telegrambot.configuration.NotificationConfiguration;
+import pro.sky.telegrambot.controllers.TelegramBot;
 import pro.sky.telegrambot.model.notificationtask.NotificationTask;
-import pro.sky.telegrambot.repositories.NotificationTaskRepository;
+import pro.sky.telegrambot.services.api.NotificationTaskServiceAPI;
 import pro.sky.telegrambot.utils.MessageUtils;
 
 import java.time.LocalDateTime;
@@ -19,49 +21,38 @@ import java.util.regex.Pattern;
 
 @Service
 public class TelegramBotUpdatesListener implements UpdatesListener {
-
-    private final String PATTERN = "^(\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}) (.+)$";
-    private TelegramBot telegramBot;
-
-    private final NotificationTaskRepository notificationTaskRepository;
+    private final TelegramBot telegramBot;
+    private final NotificationTaskServiceAPI notificationTaskService;
+    private final NotificationConfiguration notificationConfiguration;
     private final MessageUtils messageUtils;
-    private Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
+    private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
 
-    public TelegramBotUpdatesListener(NotificationTaskRepository notificationTaskRepository, MessageUtils messageUtils) {
-        this.notificationTaskRepository = notificationTaskRepository;
-        this.messageUtils = messageUtils;
-    }
-
-    @Override
-    public String getPattern() {
-        return PATTERN;
-    }
-
-    public void registerBot(TelegramBot telegramBot) {
+    public TelegramBotUpdatesListener(TelegramBot telegramBot, NotificationTaskServiceAPI notificationTaskService, NotificationConfiguration notificationConfiguration, MessageUtils messageUtils) {
         this.telegramBot = telegramBot;
+        this.notificationTaskService = notificationTaskService;
+        this.notificationConfiguration = notificationConfiguration;
+        this.messageUtils = messageUtils;
     }
 
     public void add(Update update) {
         var message = update.getMessage().getText();
-        Pattern pattern = Pattern.compile(PATTERN);
+        Pattern pattern = Pattern.compile(notificationConfiguration.getPattern());
         Matcher matcher = pattern.matcher(message);
         if (!matcher.find()) {
             throw new RuntimeException();
         }
-        LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+        LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern(notificationConfiguration.getDateFormat()));
         NotificationTask notificationTask = new NotificationTask(
                 Long.valueOf(update.getMessage().getChatId().toString()),
                 matcher.group(2),
                 dateTime
         );
-        notificationTaskRepository.save(notificationTask);
+        notificationTaskService.save(notificationTask);
     }
 
     @Scheduled(cron = "0 0/1 * * * *")
     public void run() {
-        List<NotificationTask> notifications = notificationTaskRepository.findAllByNotificationSentFalseAndDateNotificationLessThanEqual(
-                LocalDateTime.now()
-        );
+        List<NotificationTask> notifications = notificationTaskService.findAllNeedToSendNotificationsToNow();
         notifications.forEach(
                 notificationTask -> {
                     try {
@@ -71,12 +62,10 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                                         notificationTask.getMessage()
                                 )
                         );
-                        notificationTask.setNotificationSent(true);
-                        notificationTaskRepository.save(notificationTask);
+                        notificationTaskService.sent(notificationTask);
                     } catch (RuntimeException e) {
-                        logger.error(LocalDateTime.now() + ": Не удалось отправить сообщение с id = \"" + notificationTask.getId() + "\"");
+                        logger.error("Не удалось отправить сообщение с id = \"" + notificationTask.getId() + "\"");
                     }
-
                 }
         );
 

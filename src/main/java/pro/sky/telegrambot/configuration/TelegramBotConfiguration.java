@@ -6,7 +6,7 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-import pro.sky.telegrambot.listener.TelegramBot;
+import pro.sky.telegrambot.controllers.TelegramBot;
 
 @Configuration
 public class TelegramBotConfiguration {
