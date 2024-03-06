@@ -46,11 +46,11 @@ public class UpdateController {
         var message = update.getMessage();
         if (message.hasText()) {
             try {
-                logger.info("Пришло сообщение из чата: \"" + update.getMessage().getChatId() + "\" с текстом: \"" + message + "\"");
+                logger.info("Пришло сообщение из чата: \"" + update.getMessage().getChatId() + "\" с текстом: \"" + message.getText() + "\"");
                 TextCommand textCommand = textCommandFactory.getCommand(update);
                 SendMessage answerMessage = textCommand.process(update);
                 telegramBot.sendAnswerMessage(answerMessage);
-                logger.info("Обработано сообщение из чата: \"" + update.getMessage().getChatId() + "\" с текстом: \"" + message + "\"");
+                logger.info("Обработано сообщение из чата: \"" + update.getMessage().getChatId() + "\" с текстом: \"" + message.getText() + "\"");
             } catch (RuntimeException e) {
                 logger.error("Произошла непредвиденная ошибка: " + e.getMessage());
                 telegramBot.sendAnswerMessage(messageUtils.generateSendMessageWithText(update, "Что-то пошло не так!"));

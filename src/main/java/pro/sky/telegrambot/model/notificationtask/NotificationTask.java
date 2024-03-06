@@ -1,6 +1,9 @@
 package pro.sky.telegrambot.model.notificationtask;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -13,16 +16,20 @@ public class NotificationTask {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     private UUID id;
+    @Positive
+    @NotNull
     @Column(name = "chat_id")
     private Long chatId;
+    @NotBlank
     @Column(name = "message")
     private String message;
+    @NotNull
     @Column(name = "date_notification")
     private LocalDateTime dateNotification;
     @Column(name = "notification_sent")
     private boolean notificationSent;
 
-    public NotificationTask(Long chatId, String message, LocalDateTime dateNotification) {
+    public NotificationTask(@NotNull Long chatId, @NotBlank String message, @NotNull LocalDateTime dateNotification) {
         this.chatId = chatId;
         this.message = message;
         this.dateNotification = dateNotification;
@@ -40,11 +47,11 @@ public class NotificationTask {
         this.id = id;
     }
 
-    public Long getChatId() {
+    public @NotNull Long getChatId() {
         return chatId;
     }
 
-    public void setChatId(Long chatId) {
+    public void setChatId(@NotNull Long chatId) {
         this.chatId = chatId;
     }
 
@@ -56,11 +63,11 @@ public class NotificationTask {
         this.message = message;
     }
 
-    public LocalDateTime getDateNotification() {
+    public @NotNull LocalDateTime getDateNotification() {
         return dateNotification;
     }
 
-    public void setDateNotification(LocalDateTime dateNotification) {
+    public void setDateNotification(@NotNull LocalDateTime dateNotification) {
         this.dateNotification = dateNotification;
     }
 

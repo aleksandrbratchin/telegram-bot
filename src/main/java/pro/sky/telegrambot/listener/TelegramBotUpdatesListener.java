@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import pro.sky.telegrambot.configuration.NotificationConfiguration;
 import pro.sky.telegrambot.controllers.TelegramBot;
+import pro.sky.telegrambot.dto.notificationtask.NotificationTaskSaveDto;
 import pro.sky.telegrambot.model.notificationtask.NotificationTask;
 import pro.sky.telegrambot.services.api.NotificationTaskServiceAPI;
 import pro.sky.telegrambot.utils.MessageUtils;
@@ -35,19 +36,25 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     }
 
     public void add(Update update) {
+        notificationTaskService.save(parseUpdate(update));
+    }
+
+    private NotificationTaskSaveDto parseUpdate(Update update){
         var message = update.getMessage().getText();
         Pattern pattern = Pattern.compile(notificationConfiguration.getPattern());
         Matcher matcher = pattern.matcher(message);
         if (!matcher.find()) {
             throw new RuntimeException();
         }
-        LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern(notificationConfiguration.getDateFormat()));
-        NotificationTask notificationTask = new NotificationTask(
+        LocalDateTime dateTime = LocalDateTime.parse(
+                matcher.group("date"),
+                DateTimeFormatter.ofPattern(notificationConfiguration.getDateFormat())
+        );
+        return new NotificationTaskSaveDto(
                 Long.valueOf(update.getMessage().getChatId().toString()),
-                matcher.group(2),
+                matcher.group("message"),
                 dateTime
         );
-        notificationTaskService.save(notificationTask);
     }
 
     @Scheduled(cron = "0 0/1 * * * *")
@@ -68,7 +75,6 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                     }
                 }
         );
-
     }
 
 }

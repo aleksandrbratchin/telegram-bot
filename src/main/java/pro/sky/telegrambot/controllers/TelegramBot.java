@@ -1,6 +1,5 @@
 package pro.sky.telegrambot.controllers;
 
-import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -43,7 +42,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     public void register(UpdateController updateController) {
-        if (this.updateController == null){
+        if (this.updateController == null) {
             this.updateController = updateController;
         }
     }
